@@ -22,7 +22,7 @@
 ### Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
 ### MA 02111-1307, USA
 print.xtable <- function(x,
-  type = getOption("xtable.type", "latex"),
+  type = "latex", #getOption("xtable.type", "latex"),
   file = getOption("xtable.file", ""),
   append = getOption("xtable.append", FALSE),
   floating = getOption("xtable.floating", TRUE),
@@ -188,8 +188,8 @@ print.xtable <- function(x,
 
     if (length(type)>1) stop("\"type\" must have length 1")
     type <- tolower(type)
-    if (!all(!is.na(match(type, c("latex","html"))))) {
-        stop("\"type\" must be in {\"latex\", \"html\"}")
+    if (!all(!is.na(match(type, c("latex","html","pmdpipe"))))) {
+        stop("\"type\" must be in {\"latex\", \"html\", \"pmdpipe\"}")
     }
     ## Disabling the check on known floating environments as many users
     ## want to use additional environments.
@@ -400,6 +400,68 @@ print.xtable <- function(x,
         sanitize.final <- function(result) {
             return(result)
         }
+
+
+        } else if(type == "pmdpipe") {
+            ## Christoffer Moesgaard Albertsen <xpv919@alumni.ku.dk> 2014-05-21
+ 	    ## Added type to create pipe tables intended for Pandoc Markdown
+	    ## http://johnmacfarlane.net/pandoc/README.html#pipe-tables
+        BCOMMENT <- "<!-- "
+        ECOMMENT <- " -->\n"
+        BTABLE <- "\n"
+        ETABLE <- "\n"
+        BENVIRONMENT <- ""
+        EENVIRONMENT <- ""
+        BTABULAR <- ""
+        ETABULAR <- ""
+        BSIZE <- ""
+        ESIZE <- ""
+        BLABEL <- ""
+        ELABEL <- ""
+        BCAPTION <- "\n: "
+        ECAPTION <- "\n"
+        BROW <- "|"
+        EROW <- "\n"
+        BTH <- ""
+        ethVal <- c(":-:|",":-|","-:|")
+        alVal <- as.numeric(factor(align(x),levels=c("c","l","r")))
+        if(!include.rownames){
+            alVal <- alVal[-1]
+        }
+        ETH<-paste0(ethVal[alVal],collapse="")
+        ETH <- paste0("|\n|",ETH,collapse="")
+        STH <- "|"
+        BTD1 <- ""
+        BTD2 <- ""
+        BTD3 <- ""
+        ETD  <- "|"
+        sanitize <- function(str) {
+            result <- str
+            ## Changed as suggested in bug report #2795
+            ## That is replacement of "&" is "&amp;"
+            ## instead of previous "&amp" etc
+             result <- gsub("|", "\\|", result, fixed = TRUE)
+            ## result <- gsub(">", "&gt ", result, fixed = TRUE)
+            ## result <- gsub("<", "&lt ", result, fixed = TRUE)
+            ##result <- gsub("&", "&amp;", result, fixed = TRUE)
+            ##result <- gsub(">", "&gt;", result, fixed = TRUE)
+            ##result <- gsub("<", "&lt;", result, fixed = TRUE)
+            ## Kurt Hornik <Kurt.Hornik@wu-wien.ac.at> on 2006/10/05
+            ## recommended not escaping underscores.
+            ## result <- gsub("_", "\\_", result, fixed=TRUE)
+            return(result)
+        }
+        sanitize.numbers <- function(x) {
+            return(x)
+        }
+        sanitize.final <- function(result) {
+            ## Suggested by Uwe Ligges <ligges@statistik.uni-dortmund.de>
+            ## in e-mail dated 2005-07-30.
+            ##result$text <- gsub("  *", " ",  result$text, fixed = TRUE)
+            ##result$text <- gsub(' align="left"',  "", result$text,
+            ##                    fixed = TRUE)
+            return(result)
+        }
     } else {
         BCOMMENT <- "<!-- "
         ECOMMENT <- " -->\n"
@@ -462,13 +524,17 @@ print.xtable <- function(x,
             return(result)
         }
     }
-
     result <- string("", file = file, append = append)
     info <- R.Version()
+    typeText <- switch(type,
+                       latex = 'LaTeX',
+                       html = 'HTML',
+                       pmdpipe = 'Pandoc Markdown intended pipe'
+                       )
     ## modified Claudio Agostinelli <claudio@unive.it> dated 2006-07-28
     ## to set automatically the package version
 	if (comment){
-        result <- result + BCOMMENT + type + " table generated in " +
+        result <- result + BCOMMENT + typeText + " table generated in " +
               info$language + " " + info$major + "." + info$minor +
               " by xtable " +  packageDescription('xtable')$Version +
               " package" + ECOMMENT
@@ -619,10 +685,14 @@ print.xtable <- function(x,
     full[, multiplier*(0:(ncol(x)+pos-1))+4] <- BTD3
     full[, multiplier*(0:(ncol(x)+pos-1))+5] <- cols
     full[, multiplier*(0:(ncol(x)+pos-1))+6] <- ETD
-
+    if(type == "pmdpipe"){
+        full[, multiplier*(ncol(x)+pos)+2] <- paste(EROW,
+                                                    sep = "")
+    }else{
     full[, multiplier*(ncol(x)+pos)+2] <- paste(EROW, lastcol[-(1:2)],
                                                 sep = " ")
-
+    }
+    
     if (type == "latex") full[, 2] <- ""
     result <- result + lastcol[2] + paste(t(full), collapse = "")
     if (!only.contents) {
@@ -636,7 +706,7 @@ print.xtable <- function(x,
             ## following 'if' condition is inserted in order to avoid
             ## that bottom caption interferes with a top caption of a longtable
             if(caption.placement == "bottom"){
-                if ((!is.null(caption)) && (type == "latex")) {
+                if ((!is.null(caption)) && (type %in% c("latex","pmdsimpel"))) {
                     result <- result + BCAPTION + caption + ECAPTION
                 }
             }
@@ -650,7 +720,7 @@ print.xtable <- function(x,
         result <- result + ESIZE
         if ( floating == TRUE ) {
             if ((!is.null(caption)) &&
-                (type == "latex" && caption.placement == "bottom")) {
+                (type %in% c("latex","pmdpipe") && caption.placement == "bottom")) {
                 result <- result + BCAPTION + caption + ECAPTION
             }
             if (!is.null(attr(x, "label", exact = TRUE)) &&
