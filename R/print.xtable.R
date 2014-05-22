@@ -423,8 +423,8 @@ print.xtable <- function(x,
         BROW <- "|"
         EROW <- "\n"
         BTH <- ""
-        ethVal <- c(":-:|",":-|","-:|")
-        alVal <- as.numeric(factor(align(x),levels=c("c","l","r")))
+        ethVal <- c(":-:|","-|",":-|","-:|")
+        alVal <- as.numeric(factor(align(x),levels=c("c","d","l","r")))
         if(!include.rownames){
             alVal <- alVal[-1]
         }
