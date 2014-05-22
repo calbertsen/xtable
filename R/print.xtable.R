@@ -22,7 +22,7 @@
 ### Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
 ### MA 02111-1307, USA
 print.xtable <- function(x,
-  type = "latex", #getOption("xtable.type", "latex"),
+  type = getOption("xtable.type", "latex"),
   file = getOption("xtable.file", ""),
   append = getOption("xtable.append", FALSE),
   floating = getOption("xtable.floating", TRUE),
@@ -689,7 +689,7 @@ print.xtable <- function(x,
         full[, multiplier*(ncol(x)+pos)+2] <- paste(EROW,
                                                     sep = "")
     }else{
-    full[, multiplier*(ncol(x)+pos)+2] <- paste(EROW, lastcol[-(1:2)],
+        full[, multiplier*(ncol(x)+pos)+2] <- paste(EROW, lastcol[-(1:2)],
                                                 sep = " ")
     }
     
